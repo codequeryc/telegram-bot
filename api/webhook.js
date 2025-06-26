@@ -1,7 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
 import axios from 'axios';
 
-const bot = new TelegramBot(process.env.BOT_TOKEN); // token Vercel me set hoga
+const bot = new TelegramBot(process.env.BOT_TOKEN);
 const BLOGGER_URL = "https://filmylootz.blogspot.com";
 
 export default async function handler(req, res) {
@@ -30,9 +30,28 @@ export default async function handler(req, res) {
       const downloadLink = match ? match[0] : link;
 
       const replyText = `🎬 *${title}*\n📥 [Download Here](${downloadLink})\n🔗 [Read Post](${link})`;
-      await bot.sendMessage(chatId, replyText, { parse_mode: "Markdown" });
+
+      const sentMsg = await bot.sendMessage(chatId, replyText, { parse_mode: "Markdown" });
+
+      // 🕒 Delete after 60 seconds
+      setTimeout(() => {
+        bot.deleteMessage(chatId, msg.message_id)
+          .then(() => console.log("✅ User message deleted"))
+          .catch(err => console.error("❌ Failed to delete user message:", err.message));
+
+        bot.deleteMessage(chatId, sentMsg.message_id)
+          .then(() => console.log("✅ Bot reply deleted"))
+          .catch(err => console.error("❌ Failed to delete bot message:", err.message));
+      }, 60 * 1000);
+
     } else {
-      await bot.sendMessage(chatId, "❌ Movie not found.");
+      const notFoundMsg = await bot.sendMessage(chatId, "❌ Movie not found.");
+      
+      // 🕒 Delete both after 60s
+      setTimeout(() => {
+        bot.deleteMessage(chatId, msg.message_id).catch(() => {});
+        bot.deleteMessage(chatId, notFoundMsg.message_id).catch(() => {});
+      }, 60 * 1000);
     }
 
     res.status(200).end();
