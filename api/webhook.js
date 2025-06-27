@@ -33,15 +33,21 @@ export default async function handler(req, res) {
     const limitedResults = data.results.slice(0, 3);
 
     for (const movie of limitedResults) {
+      // ⬇️ Download thumbnail as buffer (no compression)
+      const imageResponse = await axios.get(movie.thumbnail, {
+        responseType: 'arraybuffer'
+      });
+      const photoBuffer = Buffer.from(imageResponse.data, 'binary');
+
       const caption = `🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!`;
 
-      await bot.sendPhoto(chatId, movie.thumbnail, {
+      await bot.sendPhoto(chatId, photoBuffer, {
         caption,
         parse_mode: "Markdown",
         disable_web_page_preview: true,
         reply_markup: {
           inline_keyboard: [
-            [              
+            [
               { text: "📥 Download Links", url: movie.download }
             ]
           ]
