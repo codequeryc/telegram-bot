@@ -1,9 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
 import axios from 'axios';
 
-import dotenv from 'dotenv';
-dotenv.config();
-
 const bot = new TelegramBot(process.env.BOT_TOKEN);
 
 export default async function handler(req, res) {
