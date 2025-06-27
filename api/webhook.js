@@ -41,9 +41,8 @@ export default async function handler(req, res) {
         disable_web_page_preview: true,
         reply_markup: {
           inline_keyboard: [
-            [
-              { text: "🔗 Download Page", url: movie.link },
-              { text: "📥 Direct Download", url: movie.download }
+            [              
+              { text: "📥 Download Links", url: movie.download }
             ]
           ]
         }
