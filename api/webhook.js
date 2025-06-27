@@ -7,12 +7,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
   const msg = req.body.message;
+  if (!msg || !msg.chat || !msg.text) return res.status(200).end(); // Prevent crash
 
   try {
     const chatId = msg.chat.id;
-    const text = msg.text?.trim();
+    const text = msg.text.trim();
 
-    // ❌ Ignore slash commands like /start, /help, etc.
     if (!text || text.startsWith('/')) return res.status(200).end();
 
     const query = text;
@@ -33,21 +33,28 @@ export default async function handler(req, res) {
     const limitedResults = data.results.slice(0, 3);
 
     for (const movie of limitedResults) {
-      const caption = `🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!`;
+      try {
+        const caption = `🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!`;
 
-      await bot.sendPhoto(chatId, movie.thumbnail, {
-        caption,
-        parse_mode: "Markdown",
-        disable_web_page_preview: true,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "🔗 Download Page", url: movie.link },
-              { text: "📥 Direct Download", url: movie.download }
+        await bot.sendPhoto(chatId, movie.thumbnail, {
+          caption,
+          parse_mode: "Markdown",
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: "🔗 Download Page", url: movie.link },
+                { text: "📥 Direct Download", url: movie.download }
+              ]
             ]
-          ]
-        }
-      });
+          }
+        });
+      } catch (err) {
+        console.error("❌ Error sending photo:", err.message);
+        await bot.sendMessage(chatId, `⚠️ Could not send image for *${movie.title}*`, {
+          parse_mode: "Markdown"
+        });
+      }
     }
 
     res.status(200).end();
