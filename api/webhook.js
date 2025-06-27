@@ -1,8 +1,9 @@
 import TelegramBot from 'node-telegram-bot-api';
 import axios from 'axios';
+import cheerio from 'cheerio';
 
 const bot = new TelegramBot(process.env.BOT_TOKEN);
-const BLOGGER_URL = "https://filmylootz.blogspot.com";
+const SITE_URL = "https://filmyfly.loan";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
@@ -16,38 +17,34 @@ export default async function handler(req, res) {
     if (!text?.includes('#')) return res.status(200).end();
 
     const movieName = text.replace(/#/g, '').trim();
-    const feedURL = `${BLOGGER_URL}/feeds/posts/default?q=${encodeURIComponent(movieName)}&alt=json`;
+    const searchURL = `${SITE_URL}/site-1.html?to-search=${encodeURIComponent(movieName)}`;
 
-    const { data } = await axios.get(feedURL);
-    const entries = data?.feed?.entry;
+    const { data: html } = await axios.get(searchURL);
+    const $ = cheerio.load(html);
 
-    if (entries?.length > 0) {
-      const entry = entries[0];
-      const title = entry.title.$t;
-      const link = entry.link.find(l => l.rel === "alternate").href;
-      const content = entry.content.$t;
-      const match = content.match(/https?:\/\/[^\s"<]+/gi);
-      const downloadLink = match ? match[0] : link;
+    // Yeh selector check kare pehla result
+    const firstResult = $('a:contains("Download")').first();
+    const href = firstResult.attr('href');
 
-      const replyText = `🎬 *${title}*\n📥 [Download Here](${downloadLink})\n🔗 [Read Post](${link})`;
+    if (href) {
+      const postUrl = SITE_URL + '/' + href;
+      const { data: postHtml } = await axios.get(postUrl);
+      const $$ = cheerio.load(postHtml);
+
+      const title = $$('title').text().trim();
+      const downloadLink = $$("a:contains('Download'), a:contains('480p'), a:contains('720p')").first().attr("href");
+
+      const replyText = `🎬 *${title}*\n📥 [Download Link](${downloadLink})\n🔗 [Open Post](${postUrl})`;
 
       const sentMsg = await bot.sendMessage(chatId, replyText, { parse_mode: "Markdown" });
 
-      // 🕒 Delete after 60 seconds
+      // Delete both messages after 60 seconds
       setTimeout(() => {
-        bot.deleteMessage(chatId, msg.message_id)
-          .then(() => console.log("✅ User message deleted"))
-          .catch(err => console.error("❌ Failed to delete user message:", err.message));
-
-        bot.deleteMessage(chatId, sentMsg.message_id)
-          .then(() => console.log("✅ Bot reply deleted"))
-          .catch(err => console.error("❌ Failed to delete bot message:", err.message));
+        bot.deleteMessage(chatId, msg.message_id).catch(() => {});
+        bot.deleteMessage(chatId, sentMsg.message_id).catch(() => {});
       }, 60 * 1000);
-
     } else {
-      const notFoundMsg = await bot.sendMessage(chatId, "❌ Movie not found.");
-      
-      // 🕒 Delete both after 60s
+      const notFoundMsg = await bot.sendMessage(chatId, "❌ Movie not found on FilmyFly.");
       setTimeout(() => {
         bot.deleteMessage(chatId, msg.message_id).catch(() => {});
         bot.deleteMessage(chatId, notFoundMsg.message_id).catch(() => {});
