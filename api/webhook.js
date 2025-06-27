@@ -25,27 +25,19 @@ export default async function handler(req, res) {
     const { data: html } = await axios.get(searchURL);
     const $ = cheerio.load(html);
 
-    // Log all links
-    $('a').each((i, el) => {
-      console.log($(el).text(), '-', $(el).attr('href'));
-    });
-
-    const firstResult = $('a:contains("Download")').first();
+    const firstResult = $('.A2 a').first();
     const href = firstResult.attr('href');
-    console.log("Found href:", href);
+    const title = $('.A2 a b span').first().text().trim();
 
     if (href) {
-      const postUrl = SITE_URL + '/' + href;
-      const { data: postHtml } = await axios.get(postUrl);
-      const $$ = cheerio.load(postHtml);
+      const postUrl = SITE_URL + href;
 
-      const title = $$('title').text().trim();
-      const downloadLink = $$("a:contains('Download'), a:contains('480p'), a:contains('720p')").first().attr("href");
-
-      const replyText = `🎬 *${title}*\n📥 [Download Link](${downloadLink})\n🔗 [Open Post](${postUrl})`;
+      // Optional: fetch post page for more info if needed
+      const replyText = `🎬 *${title}*\n📥 [Download Page](${postUrl})`;
 
       const sentMsg = await bot.sendMessage(chatId, replyText, { parse_mode: "Markdown" });
 
+      // Auto delete after 60s
       setTimeout(() => {
         bot.deleteMessage(chatId, msg.message_id).catch(() => {});
         bot.deleteMessage(chatId, sentMsg.message_id).catch(() => {});
