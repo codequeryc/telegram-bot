@@ -1,6 +1,9 @@
 import TelegramBot from 'node-telegram-bot-api';
 import axios from 'axios';
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 const bot = new TelegramBot(process.env.BOT_TOKEN);
 
 export default async function handler(req, res) {
@@ -15,25 +18,37 @@ export default async function handler(req, res) {
     if (!text?.includes('#')) return res.status(200).end();
 
     const query = text.replace(/#/g, '').trim();
-    const apiBase = process.env.API_URL;
+    const apiBase = process.env.API_URL || 'https://dlinkz.vercel.app/api/urls?q=';
     const apiUrl = `${apiBase}${encodeURIComponent(query)}`;
 
     const response = await axios.get(apiUrl);
     const data = response.data;
 
     if (!data.results || data.results.length === 0) {
-      await bot.sendMessage(chatId, `❌ No results found for *${query}*.`, {
-        parse_mode: "Markdown"
+      const notFoundMsg = await bot.sendMessage(chatId, `❌ No results found for *${query}*.`, {
+        parse_mode: "Markdown",
+        disable_web_page_preview: true
       });
+
+      // ⏱️ Only delete bot reply
+      setTimeout(() => {
+        bot.deleteMessage(chatId, notFoundMsg.message_id).catch(() => {});
+      }, 60000);
+
       return res.status(200).end();
     }
 
-    for (const movie of data.results) {
+    // 👇 Limit to top 3
+    const limitedResults = data.results.slice(0, 3);
+    const moreResults = data.results.length > 3;
+
+    for (const movie of limitedResults) {
       const caption = `🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!`;
 
-      await bot.sendPhoto(chatId, movie.thumbnail, {
+      const sentMsg = await bot.sendPhoto(chatId, movie.thumbnail, {
         caption,
         parse_mode: "Markdown",
+        disable_web_page_preview: true,
         reply_markup: {
           inline_keyboard: [
             [
@@ -43,6 +58,28 @@ export default async function handler(req, res) {
           ]
         }
       });
+
+      setTimeout(() => {
+        bot.deleteMessage(chatId, sentMsg.message_id).catch(() => {});
+      }, 60000); // ⏱️ Delete only bot message
+    }
+
+    // 🧩 View More Button
+    if (moreResults) {
+      const moreBtn = await bot.sendMessage(chatId, `🔎 *More results available for:* _${query}_`, {
+        parse_mode: "Markdown",
+        disable_web_page_preview: true,
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🔍 View All", url: `${apiBase}${encodeURIComponent(query)}` }]
+          ]
+        }
+      });
+
+      // ⏱️ Delete "More" message after 60s
+      setTimeout(() => {
+        bot.deleteMessage(chatId, moreBtn.message_id).catch(() => {});
+      }, 60000);
     }
 
     res.status(200).end();
