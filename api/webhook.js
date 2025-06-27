@@ -11,6 +11,8 @@ export default async function handler(req, res) {
   const msg = req.body.message;
 
   try {
+    console.log("Incoming Telegram message:", msg);
+
     const chatId = msg.chat.id;
     const text = msg.text;
 
@@ -18,13 +20,19 @@ export default async function handler(req, res) {
 
     const movieName = text.replace(/#/g, '').trim();
     const searchURL = `${SITE_URL}/site-1.html?to-search=${encodeURIComponent(movieName)}`;
+    console.log("Search URL:", searchURL);
 
     const { data: html } = await axios.get(searchURL);
     const $ = cheerio.load(html);
 
-    // Yeh selector check kare pehla result
+    // Log all links
+    $('a').each((i, el) => {
+      console.log($(el).text(), '-', $(el).attr('href'));
+    });
+
     const firstResult = $('a:contains("Download")').first();
     const href = firstResult.attr('href');
+    console.log("Found href:", href);
 
     if (href) {
       const postUrl = SITE_URL + '/' + href;
@@ -38,13 +46,13 @@ export default async function handler(req, res) {
 
       const sentMsg = await bot.sendMessage(chatId, replyText, { parse_mode: "Markdown" });
 
-      // Delete both messages after 60 seconds
       setTimeout(() => {
         bot.deleteMessage(chatId, msg.message_id).catch(() => {});
         bot.deleteMessage(chatId, sentMsg.message_id).catch(() => {});
       }, 60 * 1000);
     } else {
       const notFoundMsg = await bot.sendMessage(chatId, "❌ Movie not found on FilmyFly.");
+
       setTimeout(() => {
         bot.deleteMessage(chatId, msg.message_id).catch(() => {});
         bot.deleteMessage(chatId, notFoundMsg.message_id).catch(() => {});
@@ -53,7 +61,7 @@ export default async function handler(req, res) {
 
     res.status(200).end();
   } catch (err) {
-    console.error("Bot error:", err.message);
+    console.error("Bot error:", err);
     res.status(500).send("Error");
   }
 }
