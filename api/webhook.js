@@ -17,13 +17,13 @@ export default async function handler(req, res) {
 
     const query = text;
     const apiBase = process.env.API_URL;
-    const apiUrl = `${apiBase}${encodeURIComponent(query)}`;
+    const apiUrl = ${apiBase}${encodeURIComponent(query)};
 
     const response = await axios.get(apiUrl);
     const data = response.data;
 
     if (!data.results || data.results.length === 0) {
-      await bot.sendMessage(chatId, `❌ No results found for *${query}*.`, {
+      await bot.sendMessage(chatId, ❌ No results found for *${query}*., {
         parse_mode: "Markdown",
         disable_web_page_preview: true
       });
@@ -33,21 +33,15 @@ export default async function handler(req, res) {
     const limitedResults = data.results.slice(0, 3);
 
     for (const movie of limitedResults) {
-      // ⬇️ Download thumbnail as buffer (no compression)
-      const imageResponse = await axios.get(movie.thumbnail, {
-        responseType: 'arraybuffer'
-      });
-      const photoBuffer = Buffer.from(imageResponse.data, 'binary');
+      const caption = 🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!;
 
-      const caption = `🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!`;
-
-      await bot.sendPhoto(chatId, photoBuffer, {
+      await bot.sendPhoto(chatId, movie.thumbnail, {
         caption,
         parse_mode: "Markdown",
         disable_web_page_preview: true,
         reply_markup: {
           inline_keyboard: [
-            [
+            [              
               { text: "📥 Download Links", url: movie.download }
             ]
           ]
