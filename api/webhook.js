@@ -12,9 +12,10 @@ export default async function handler(req, res) {
     const chatId = msg.chat.id;
     const text = msg.text?.trim();
 
-    if (!text) return res.status(200).end(); // ignore empty
+    // ❌ Ignore slash commands like /start, /help, etc.
+    if (!text || text.startsWith('/')) return res.status(200).end();
 
-    const query = text; // plain text input as query
+    const query = text;
     const apiBase = process.env.API_URL;
     const apiUrl = `${apiBase}${encodeURIComponent(query)}`;
 
