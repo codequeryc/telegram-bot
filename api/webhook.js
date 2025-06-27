@@ -12,9 +12,31 @@ export default async function handler(req, res) {
     const chatId = msg.chat.id;
     const text = msg.text;
 
-    if (!text?.includes('#')) return res.status(200).end();
+    // ✅ Handle /start command
+    if (text.toLowerCase() === '/start') {
+      await bot.sendMessage(chatId, `👋 Welcome to MovieBot!
 
-    const query = text.replace(/#/g, '').trim();
+Use the command:
+/search <movie name>
+
+Example:
+/search Animal`, {
+        parse_mode: "Markdown"
+      });
+      return res.status(200).end();
+    }
+
+    // ✅ Only process /search command
+    if (!text?.toLowerCase().startsWith('/search')) return res.status(200).end();
+
+    const query = text.replace(/\/search/i, '').trim();
+    if (!query) {
+      await bot.sendMessage(chatId, `❗ Usage: /search <movie name>`, {
+        parse_mode: "Markdown"
+      });
+      return res.status(200).end();
+    }
+
     const apiBase = process.env.API_URL || 'https://dlinkz.vercel.app/api/urls?q=';
     const apiUrl = `${apiBase}${encodeURIComponent(query)}`;
 
@@ -27,7 +49,6 @@ export default async function handler(req, res) {
         disable_web_page_preview: true
       });
 
-      // ⏱️ Only delete bot reply
       setTimeout(() => {
         bot.deleteMessage(chatId, notFoundMsg.message_id).catch(() => {});
       }, 60000);
@@ -35,7 +56,6 @@ export default async function handler(req, res) {
       return res.status(200).end();
     }
 
-    // 👇 Limit to top 3
     const limitedResults = data.results.slice(0, 3);
     const moreResults = data.results.length > 3;
 
@@ -58,10 +78,9 @@ export default async function handler(req, res) {
 
       setTimeout(() => {
         bot.deleteMessage(chatId, sentMsg.message_id).catch(() => {});
-      }, 60000); // ⏱️ Delete only bot message
+      }, 60000);
     }
 
-    // 🧩 View More Button
     if (moreResults) {
       const moreBtn = await bot.sendMessage(chatId, `🔎 *More results available for:* _${query}_`, {
         parse_mode: "Markdown",
@@ -73,7 +92,6 @@ export default async function handler(req, res) {
         }
       });
 
-      // ⏱️ Delete "More" message after 60s
       setTimeout(() => {
         bot.deleteMessage(chatId, moreBtn.message_id).catch(() => {});
       }, 60000);
