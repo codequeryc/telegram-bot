@@ -27,13 +27,24 @@ export default async function handler(req, res) {
       return res.status(200).end();
     }
 
-    // ✅ Send all results (one by one)
     for (const movie of data.results) {
-      const caption = `🎬 *${movie.title}*\n\n🔗 [Download Page](${movie.link})\n📥 [Direct Download](${movie.download})`;
+      const caption = `🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!`;
+
+      const buttons = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "🔗 Download Page", url: movie.link },
+              { text: "📥 Direct Download", url: movie.download }
+            ]
+          ]
+        },
+        parse_mode: "Markdown"
+      };
 
       await bot.sendPhoto(chatId, movie.thumbnail, {
         caption,
-        parse_mode: "Markdown"
+        ...buttons
       });
     }
 
