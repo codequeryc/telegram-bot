@@ -15,7 +15,8 @@ export default async function handler(req, res) {
     if (!text?.includes('#')) return res.status(200).end();
 
     const query = text.replace(/#/g, '').trim();
-    const apiUrl = `https://dlinkz.vercel.app/api/urls?q=${encodeURIComponent(query)}`;
+    const apiBase = process.env.API_URL;
+    const apiUrl = `${apiBase}${encodeURIComponent(query)}`;
 
     const response = await axios.get(apiUrl);
     const data = response.data;
@@ -30,7 +31,9 @@ export default async function handler(req, res) {
     for (const movie of data.results) {
       const caption = `🎬 *${movie.title}*\n\n📅 *Released:* Unknown\n🍿 *Source:* FilmyFly\n\nEnjoy downloading your favorite movie!`;
 
-      const buttons = {
+      await bot.sendPhoto(chatId, movie.thumbnail, {
+        caption,
+        parse_mode: "Markdown",
         reply_markup: {
           inline_keyboard: [
             [
@@ -38,13 +41,7 @@ export default async function handler(req, res) {
               { text: "📥 Direct Download", url: movie.download }
             ]
           ]
-        },
-        parse_mode: "Markdown"
-      };
-
-      await bot.sendPhoto(chatId, movie.thumbnail, {
-        caption,
-        ...buttons
+        }
       });
     }
 
